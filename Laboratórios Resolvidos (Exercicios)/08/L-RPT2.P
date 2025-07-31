@@ -1,0 +1,24 @@
+DEFINE VARIABLE cArq AS CHARACTER   NO-UNDO.
+
+DEFINE frame header-frame header today "Relatório Detalhado de Pedidos" at 30 skip(1) 
+  	  with page-top no-box.
+define frame footer-frame header skip(1) "Pag." page-number format "zZZZ9"
+  	  with page-bottom no-box.
+
+ cArq = "C:/treinamento/l-rpt2" + STRING(TIME) + ".txt".
+output to value(cArq) PAGE-SIZE 30. 
+for-order: 
+for each order, 
+    each orderline of order
+  		by order.CustNum by order.OrderNum by orderline.LineNum:
+    view frame header-frame.
+  	  view frame footer-frame.
+    	find customer where customer.CustNum = order.CustNum.
+    find item where item.ItemNum = orderline.ItemNum.
+  	  display order.OrderNum order.OrderDate customer.Name
+    	        item.ItemNum orderline.Qty item.ItemName with stream-io no-box.
+end. /* for-order */
+view frame footer-frame.
+page.
+OUTPUT CLOSE.
+OS-COMMAND NO-WAIT VALUE(cArq).
