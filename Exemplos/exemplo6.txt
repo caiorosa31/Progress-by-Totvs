@@ -1,0 +1,44 @@
+/*
+DISABLE TRIGGERS FOR LOAD OF customer.
+    */
+DEFINE VARIABLE csales LIKE customer.sales-rep NO-UNDO.
+DEF BUTTON bt-salva LABEL "Salva" AUTO-GO.
+DEF FRAME f-x
+    Customer.Cust-Num 
+    Customer.Name 
+    Customer.Discount 
+    Customer.Phone 
+    Customer.Postal-Code 
+    csales VALIDATE(CAN-FIND(salesrep WHERE salesrep.sales-rep = INPUT csales), 
+                    " nao encontrei o representante")
+    Customer.Sales-Rep VALIDATE(TRUE, "")
+    Customer.State 
+    Customer.Terms
+    bt-salva AT 5
+    WITH SIDE-LABELS 2 COLUMNS KEEP-TAB-ORDER.
+
+ON 'choose':U OF bt-salva DO:
+    IF NOT CAN-FIND(salesrep 
+        WHERE salesrep.sales-rep = customer.sales-rep:screen-value) THEN DO:
+        MESSAGE "Salesrep invalido" VIEW-AS ALERT-BOX.
+        APPLY "entry" TO customer.sales-rep.
+        RETURN NO-APPLY.
+    END.
+END.
+
+FOR EACH customer 
+    FIELDS (cust-num NAME) EXCLUSIVE-LOCK
+    WHERE credit-limit > 15000:
+    UPDATE 
+        Customer.Cust-Num     Customer.Name 
+        Customer.Discount     Customer.Phone 
+        Customer.Postal-Code  csales
+        Customer.Sales-Rep VALIDATE(TRUE, "")
+        Customer.State        Customer.Terms
+        bt-salva
+        WITH FRAME f-x.
+END.
+  
+
+
+

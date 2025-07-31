@@ -1,0 +1,260 @@
+/* persistente.p */
+/*
+RUN pi-calcula.
+*/
+DEF VAR zzz AS CHAR NO-UNDO.
+
+MESSAGE "estou aqui - " zzz VIEW-AS ALERT-BOX.
+
+PROCEDURE pi-calcula:
+    ASSIGN zzz = "calcula".
+    MESSAGE "executando calcula - " zzz VIEW-AS ALERT-BOX.
+END PROCEDURE.
+
+PROCEDURE pi-resposta:
+    ASSIGN zzz = "resposta".
+    MESSAGE "executando resposta - " zzz VIEW-AS ALERT-BOX.
+END PROCEDURE.
+
+
+
+
+DEFINE VARIABLE wProg AS HANDLE      NO-UNDO.
+
+RUN c:/treinamento/persistente.p PERSISTENT SET wProg.
+
+RUN pi-calcula IN wProg.
+RUN pi-resposta IN wProg.
+RUN pi-calcula IN wProg.
+
+DISP int(wProg).
+/*
+DELETE PROCEDURE wProg.
+*/
+
+DELETE OBJECT wProg.
+
+
+
+
+DEFINE BUTTON bt-ok LABEL "ok" SIZE 20 BY 3.
+DEFINE BUTTON bt-canc LABEL "canc" SIZE 20 BY 1.
+
+DEF FRAME f-x
+    bt-ok   AT 1
+    bt-canc AT 1
+    WITH NO-LABELS.
+
+ON CHOOSE, mouse-select-dblclick  OF  bt-canc, bt-ok DO:
+    ASSIGN bt-ok:VISIBLE = FALSE.
+END.
+ENABLE ALL WITH FRAME f-x.
+APPLY "choose" TO bt-canc IN FRAME f-x.
+WAIT-FOR WINDOW-CLOSE OF CURRENT-WINDOW.
+
+
+
+
+
+def new shared temp-table tt-dados no-undo
+    field codigo as integer
+    field nome   as char.
+create tt-dados.
+assign tt-dados.codigo = 1
+       tt-dados.nome   = "fulano".
+run prog-b.p.
+
+
+/* prog-b */
+def shared temp-table tt-dados no-undo
+    field codigo as integer
+    field nome   as char.
+create tt-dados.
+assign tt-dados.codigo = 2
+       tt-dados.nome   = "beltrano".
+for each tt-dados no-lock:
+    disp tt-dados.
+end.
+
+
+
+
+def var l-existe as logical no-undo.
+for each order no-lock:
+    disp order.ordernum.
+    run pi-processa (input order.ordernum, output l-existe).
+end.
+procedure pi-processa:
+    def input  param p-ordernum as integer no-undo.
+    def output param p-achou     as logical no-undo init no.
+    for each orderline 
+        where orderline.ordernum = p-ordernum no-lock:
+        disp orderline.
+        assign p-achou = yes.
+    end.
+end procedure.
+
+
+
+DEFINE VARIABLE wProg AS HANDLE      NO-UNDO.
+DEFINE VARIABLE calc  AS INTEGER     NO-UNDO.
+
+RUN c:/treinamento/persistente.p PERSISTENT SET wProg.
+
+
+RUN pi-calcula IN wProg (INPUT 2, INPUT 3, OUTPUT calc).
+DISP calc.
+
+RUN pi-resposta IN wProg (INPUT-OUTPUT calc).
+DISP calc.
+
+RUN pi-calcula IN wProg (5, 5, OUTPUT calc).
+DISP calc.
+
+/*
+DISP int(wProg).
+DELETE PROCEDURE wProg.
+*/
+
+DELETE OBJECT wProg.
+
+
+
+PARAM BUFFER
+============
+def buffer b-cust for customer.
+for each customer no-lock:
+    run pi-processa(buffer customer).
+end.
+procedure pi-processa:
+    def param buffer b-cust for customer.
+    disp b-cust.custnum
+         b-cust.name.
+end procedure.
+
+
+PARAM TABLE
+===========
+def temp-table tt-dados no-undo like customer.
+run pi-processa(output table tt-dados).
+for each tt-dados:
+    disp tt-dados.custnum
+         tt-dados.name.
+end.
+procedure pi-processa:
+    def output param table for tt-dados.
+    for each customer no-lock:
+        create tt-dados.
+        buffer-copy customer to tt-dados.
+    end.
+end procedure.
+
+
+
+
+
+def temp-table tt-dados no-undo like customer.
+output to c:\tmp\exp.txt.
+for each customer no-lock:
+    export customer.
+end.
+output close.
+input from c:\tmp\exp.txt.
+repeat:
+    create tt-dados.
+    import tt-dados.
+end.
+input close.
+for each tt-dados:
+    disp tt-dados.custnum
+         tt-dados.name.
+end.
+
+
+
+
+
+
+/* persistente.p */
+/*
+RUN pi-calcula.
+*/
+DEF VAR zzz AS CHAR NO-UNDO.
+
+MESSAGE "estou aqui - " zzz VIEW-AS ALERT-BOX.
+
+PROCEDURE pi-calcula:
+    DEF INPUT PARAM p1 AS INTEGER NO-UNDO.
+    DEF INPUT PARAM p2 AS INTEGER NO-UNDO.
+    DEF OUTPUT PARAM p3 AS INTEGER NO-UNDO.
+
+    ASSIGN p3 = p1 * p2
+           zzz = "calcula".
+    MESSAGE "executando calcula - " zzz p3 VIEW-AS ALERT-BOX.
+END PROCEDURE.
+
+PROCEDURE pi-resposta:
+    DEF INPUT-OUTPUT PARAM pcalc AS INTEGER NO-UNDO.
+
+    ASSIGN pcalc = pcalc * 1000
+           zzz = "resposta".
+    MESSAGE "executando resposta - " pcalc VIEW-AS ALERT-BOX.
+END PROCEDURE.
+
+
+
+
+/*Export delimiter */
+
+def temp-table tt-state like state.
+
+
+output to c:\temp\teste.csv.
+
+    for each state:
+        export delimiter ";" state.
+    end.
+
+output close.
+
+input from c:\temp\teste.csv.
+
+/*cria os dados de acordo com o arquivo*/
+repeat: 
+      create tt-state. 
+      import delimiter ";" tt-state.
+      
+end.
+input close.
+
+
+/*mostra dados*/
+for each tt-state no-lock:
+    disp tt-state.
+end.
+
+
+
+
+
+def temp-table tt-dados no-undo like customer.
+output to c:\tmp\exp.txt.
+for each customer no-lock:
+    export customer.
+end.
+output close.
+OS-COMMAND NO-WAIT value("notepad c:\tmp\exp.txt").
+input from c:\tmp\exp.txt.
+repeat:
+    create tt-dados.
+    import tt-dados.
+end.
+input close.
+for each tt-dados:
+    disp tt-dados.cust-num
+         tt-dados.name.
+end.
+
+
+
+

@@ -1,0 +1,151 @@
+
+bloco_pai:
+do  on error UNDO bloco_pai, LEAVE bloco_pai
+    on stop  undo, leave
+    on quit  undo, leave:
+    /*
+    QUIT.
+    */
+    bloco_filho:
+    FOR EACH customer EXCLUSIVE-LOCK
+        ON ERROR UNDO bloco_filho, NEXT bloco_filho:
+        DISP customer.cust-num.
+        DELETE customer NO-ERROR.
+        IF ERROR-STATUS:ERROR THEN DO:
+            MESSAGE "deu erro no codigo " customer.cust-num
+                VIEW-AS ALERT-BOX.
+        END.
+    END.
+    message "customers eliminados" view-as alert-box.
+    run x.p NO-ERROR.
+    IF ERROR-STATUS:ERROR THEN DO:
+        MESSAGE "nao conseguiu executar o programa x.p "
+            VIEW-AS ALERT-BOX.
+    END.
+end.
+message "passei por aqui" view-as alert-box.
+
+
+
+
+MESSAGE "1-" TRANSACTION VIEW-AS ALERT-BOX.
+RUN pi-processa.
+MESSAGE "2-" TRANSACTION VIEW-AS ALERT-BOX.
+
+PROCEDURE pi-processa:
+    MESSAGE "3-dentro da pi - " TRANSACTION VIEW-AS ALERT-BOX.
+    FIND FIRST customer EXCLUSIVE-LOCK NO-ERROR.
+    ASSIGN customer.sales-rep = "BBB".
+    MESSAGE "4-dentro da pi - " TRANSACTION VIEW-AS ALERT-BOX.
+END PROCEDURE.
+
+
+
+
+MESSAGE "1-" TRANSACTION VIEW-AS ALERT-BOX.
+
+RUN pi-processa.
+IF RETURN-VALUE = "NOK" THEN DO:
+    MESSAGE "houve erro durante a execucao da PI" VIEW-AS ALERT-BOX.
+END.
+MESSAGE "2-" TRANSACTION VIEW-AS ALERT-BOX.
+
+PROCEDURE pi-processa:
+    MESSAGE "3-dentro da pi - " TRANSACTION VIEW-AS ALERT-BOX.
+    DO TRANSACTION ON ERROR UNDO, RETURN "NOK":
+        FIND customer 
+            WHERE customer.cust-num = 999453 
+            EXCLUSIVE-LOCK NO-ERROR.
+        ASSIGN customer.sales-rep = "BBB" NO-ERROR.
+        IF ERROR-STATUS:ERROR THEN DO:
+            MESSAGE "deu erro - " ERROR-STATUS:GET-MESSAGE(1)
+                VIEW-AS ALERT-BOX.
+            UNDO, RETURN "NOK".
+        END.
+    END.
+/*
+    IF customer.sales-rep = "bbb" THEN
+        RETURN "NOK".
+*/
+    MESSAGE "4-dentro da pi - " TRANSACTION VIEW-AS ALERT-BOX.
+
+    RETURN "OK".
+END PROCEDURE.
+
+
+
+
+
+MESSAGE "1-" TRANSACTION VIEW-AS ALERT-BOX.
+
+DO TRANSACTION:
+    FIND FIRST order EXCLUSIVE-LOCK.
+END.
+
+RUN pi-processa.
+IF RETURN-VALUE = "NOK" THEN DO:
+    MESSAGE "houve erro durante a execucao da PI" VIEW-AS ALERT-BOX.
+END.
+MESSAGE "2-" TRANSACTION VIEW-AS ALERT-BOX.
+
+FOR EACH order-line OF order TRANSACTION:
+    DISP order-line.
+END.
+
+PROCEDURE pi-processa:
+    MESSAGE "3-dentro da pi - " TRANSACTION VIEW-AS ALERT-BOX.
+    DO TRANSACTION ON ERROR UNDO, RETURN "NOK":
+        FIND customer 
+            WHERE customer.cust-num = 999453 
+            EXCLUSIVE-LOCK NO-ERROR.
+        ASSIGN customer.sales-rep = "BBB" NO-ERROR.
+        IF ERROR-STATUS:ERROR THEN DO:
+            MESSAGE "deu erro - " ERROR-STATUS:GET-MESSAGE(1)
+                VIEW-AS ALERT-BOX.
+            UNDO, RETURN "NOK".
+        END.
+    END.
+/*
+    IF customer.sales-rep = "bbb" THEN
+        RETURN "NOK".
+*/
+    MESSAGE "4-dentro da pi - " TRANSACTION VIEW-AS ALERT-BOX.
+
+    RETURN "OK".
+END PROCEDURE.
+
+
+
+
+
+DEF BUFFER bf-cust FOR customer.
+
+FOR EACH customer NO-LOCK:
+    IF customer.credit-limit = 15000 THEN DO TRANSACTION:
+        FIND bf-cust 
+            WHERE ROWID(bf-cust) = ROWID(customer) 
+            EXCLUSIVE-LOCK NO-ERROR.
+        IF AVAIL bf-cust THEN DO:
+            ASSIGN bf-cust.sales-rep = "BBB".
+        END.
+    END.
+END.
+
+
+
+
+
+message "can-find(first customer)=" can-find(first customer) skip
+        "entry(3,'aaa,bbb,ccc,ddd')=" entry(3,"aaa,bbb,ccc,ddd") skip
+        "num-entries('banana','a')=" num-entries("banana","a") skip
+        'substr("abacaxi", 4, 2)=' substr("abacaxi", 4, 2) skip
+        'string(121.21,"9999.999")=' string(121.21,"9999.999") skip
+        'length("teste de escrita")=' length("teste de escrita") skip
+        'substitute("&1 foi eleito","O presitente")=' substitute("&1 foi eleito","O presitente") skip
+        'trim("     teste      ") + "x" =' trim("     teste      ") + "x" skip
+        'replace("banana", "a", "xyz")=' replace("banana", "a", "xyz") skip
+        'index("teste de escrita", "de")=' index("teste de escrita", "de") 
+        view-as alert-box.
+
+
+
