@@ -148,7 +148,7 @@ RUN piOpenQuery.
 RUN piHabilitaBotoes (INPUT TRUE).
 APPLY "choose" TO bt-pri.
 
-WAIT-FOR ENDKEY OF FRAME f-cust.
+WAIT-FOR WINDOW-CLOSE OF FRAME f-cust.
 
 PROCEDURE piMostra:
     IF AVAILABLE customer THEN DO:
