@@ -66,7 +66,11 @@ O treinamento foi dividido em módulos progressivos e práticos, com foco em des
 💻 Sistema operacional Windows 10+                                                                                   
 
 ---
+## ☕ Vamos codar? 
+```bash
 
-☕ Vamos codar?
-Movido a café e lógica, escrevo códigos que fazem o mundo girar (ou pelo menos o sistema rodar sem bugs).
-Cada programa aqui representa um aprendizado — e uma linha de código mais próxima da maestria.
+/* Movido a café e lógica, escrevo códigos que fazem o mundo girar (ou pelo menos
+o sistema rodar sem bugs).
+Cada programa aqui representa um aprendizado — e uma linha de código mais próxima da maestria. */
+
+```
