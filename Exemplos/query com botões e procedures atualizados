@@ -10,6 +10,7 @@ DEFINE BUTTON bt-del LABEL "Remover".
 DEFINE BUTTON bt-save LABEL "Salvar".
 DEFINE BUTTON bt-canc LABEL "Cancelar".
 DEFINE BUTTON bt-sair LABEL "Sair" AUTO-ENDKEY.
+DEFINE BUTTON bt-rel LABEL "Relatorio".
 
 DEFINE VARIABLE cAction  AS CHARACTER   NO-UNDO.
 
@@ -23,7 +24,7 @@ DEFINE FRAME f-cust
     bt-ant 
     bt-prox 
     bt-ult SPACE(3) 
-    bt-add bt-mod bt-del SPACE(3)
+    bt-add bt-mod bt-del bt-rel SPACE(3)
     bt-save bt-canc SPACE(3)
     bt-sair  SKIP(1)
     customer.custnum  COLON 20
@@ -31,8 +32,8 @@ DEFINE FRAME f-cust
     customer.salesrep COLON 20 salesrep.repname NO-LABELS  
     customer.address  COLON 20
     customer.comments VIEW-AS EDITOR SIZE 70 BY 3 SCROLLBAR-VERTICAL COLON 20
-    WITH SIDE-LABELS THREE-D SIZE 100 BY 20
-            VIEW-AS DIALOG-BOX TITLE "Manutencao de Clientes".
+    WITH SIDE-LABELS THREE-D SIZE 120 BY 20
+         VIEW-AS DIALOG-BOX TITLE "Manuten‡Æo de Clientes".
 
 ON 'choose' OF bt-pri DO:
     GET FIRST qCust.
@@ -81,7 +82,7 @@ ON 'choose' OF bt-del DO:
     
     MESSAGE "Confirma a eliminacao do customer" customer.custnum "?" UPDATE lConf
             VIEW-AS ALERT-BOX QUESTION BUTTONS YES-NO
-                TITLE "Elimina��o".
+                TITLE "Elimina‡Æo".
     IF  lConf THEN DO:
         FIND bCustomer
             WHERE bCustomer.custnum = customer.custnum
@@ -144,6 +145,37 @@ ON 'choose' OF bt-canc DO:
     RUN piMostra.
 END.
 
+ON CHOOSE OF bt-rel DO:
+    DEFINE VARIABLE cArq AS CHARACTER NO-UNDO.
+    DEFINE FRAME f-cab HEADER
+        "Relatorio de Customers" AT 1
+        TODAY TO 120
+        WITH PAGE-TOP WIDTH 120.
+    DEFINE FRAME f-dados
+        Customer.CustNum
+        Customer.Name
+        Customer.State
+        customer.salesrep
+        Salesrep.RepName
+        WITH DOWN WIDTH 120.
+    ASSIGN cArq = SESSION:TEMP-DIRECTORY + "sports.txt".
+    OUTPUT to value(cArq) page-size 20 paged.
+    VIEW FRAME f-cab.
+    FOR EACH customer NO-LOCK WITH FRAME f-dados:
+        FIND FIRST salesrep 
+            WHERE Salesrep.SalesRep = Customer.SalesRep 
+            NO-LOCK NO-ERROR.
+        DISPLAY Customer.CustNum
+            Customer.Name
+            Customer.State
+            customer.salesrep
+            Salesrep.RepName WHEN AVAILABLE salesrep
+            WITH FRAME f-dados.
+    END.
+    OUTPUT close.
+    OS-COMMAND NO-WAIT VALUE(cArq).
+END.
+
 RUN piOpenQuery.
 RUN piHabilitaBotoes (INPUT TRUE).
 APPLY "choose" TO bt-pri.
@@ -188,6 +220,7 @@ PROCEDURE piHabilitaBotoes:
               bt-add:SENSITIVE  = pEnable
               bt-mod:SENSITIVE  = pEnable
               bt-del:SENSITIVE  = pEnable
+              bt-rel:SENSITIVE  = pEnable
               bt-save:SENSITIVE = NOT pEnable
               bt-canc:SENSITIVE = NOT pEnable.
     END.
@@ -207,7 +240,7 @@ END PROCEDURE.
 PROCEDURE piValidaSalesrep:
     DEFINE INPUT PARAMETER pSalesrep AS CHARACTER NO-UNDO.
     DEFINE OUTPUT PARAMETER pValid AS LOGICAL NO-UNDO INITIAL NO.
-    
+  
     FIND FIRST bSales
         WHERE bSales.salesrep = pSalesrep
         NO-LOCK NO-ERROR.
