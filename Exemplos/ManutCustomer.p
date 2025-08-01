@@ -1,5 +1,5 @@
 CURRENT-WINDOW:WIDTH = 251.
-
+ 
 DEFINE BUTTON bt-pri LABEL "<<".
 DEFINE BUTTON bt-ant LABEL "<".
 DEFINE BUTTON bt-prox LABEL ">".
@@ -11,20 +11,21 @@ DEFINE BUTTON bt-save LABEL "Salvar".
 DEFINE BUTTON bt-canc LABEL "Cancelar".
 DEFINE BUTTON bt-sair LABEL "Sair" AUTO-ENDKEY.
 DEFINE BUTTON bt-rel LABEL "Relatorio".
-
+DEFINE BUTTON bt-csv LABEL "Gerar csv".
+ 
 DEFINE VARIABLE cAction  AS CHARACTER   NO-UNDO.
-
+ 
 DEFINE QUERY qCust FOR customer, salesrep SCROLLING.
-
+ 
 DEFINE BUFFER bCust  FOR customer.
 DEFINE BUFFER bSales FOR salesrep.
-
+ 
 DEFINE FRAME f-cust
     bt-pri AT 10
     bt-ant 
     bt-prox 
     bt-ult SPACE(3) 
-    bt-add bt-mod bt-del bt-rel SPACE(3)
+    bt-add bt-mod bt-del bt-rel bt-csv SPACE(3)
     bt-save bt-canc SPACE(3)
     bt-sair  SKIP(1)
     customer.custnum  COLON 20
@@ -33,53 +34,49 @@ DEFINE FRAME f-cust
     customer.address  COLON 20
     customer.comments VIEW-AS EDITOR SIZE 70 BY 3 SCROLLBAR-VERTICAL COLON 20
     WITH SIDE-LABELS THREE-D SIZE 120 BY 20
-         VIEW-AS DIALOG-BOX TITLE "Manuten‡Æo de Clientes".
-
+         VIEW-AS DIALOG-BOX TITLE "Manutencao de Clientes".
+ 
 ON 'choose' OF bt-pri DO:
     GET FIRST qCust.
     RUN piMostra.
 END.
-
+ 
 ON 'choose' OF bt-ant DO:
     GET PREV qCust.
     RUN piMostra.
 END.
-
+ 
 ON 'choose' OF bt-prox DO:
     GET NEXT qCust.
     RUN piMostra.
 END.
-
+ 
 ON 'choose' OF bt-ult DO:
     GET LAST qCust.
     RUN piMostra.
 END.
-
+ 
 ON 'choose' OF bt-add DO:
     ASSIGN cAction = "add".
     RUN piHabilitaBotoes (INPUT FALSE).
     RUN piHabilitaCampos (INPUT TRUE).
-   
     CLEAR FRAME f-cust.
     DISPLAY NEXT-VALUE(NextCustNum) @ customer.custnum WITH FRAME f-cust.
     ASSIGN customer.comments:SCREEN-VALUE = "". 
 END.
-
+ 
 ON 'choose' OF bt-mod DO:
     ASSIGN cAction = "mod".
     RUN piHabilitaBotoes (INPUT FALSE).
     RUN piHabilitaCampos (INPUT TRUE).
-   
     DISPLAY customer.custnum WITH FRAME f-cust.
     RUN piMostra.
     ASSIGN customer.comments:SCREEN-VALUE = "". 
 END.
-
+ 
 ON 'choose' OF bt-del DO:
     DEFINE VARIABLE lConf AS LOGICAL     NO-UNDO.
-    
     DEFINE BUFFER bCustomer FOR customer.
-    
     MESSAGE "Confirma a eliminacao do customer" customer.custnum "?" UPDATE lConf
             VIEW-AS ALERT-BOX QUESTION BUTTONS YES-NO
                 TITLE "Elimina‡Æo".
@@ -99,7 +96,7 @@ ON 'choose' OF bt-del DO:
         END.
     END.
 END.
-
+ 
 ON 'leave' OF customer.salesrep DO:
     DEFINE VARIABLE lValid AS LOGICAL     NO-UNDO.
     RUN piValidaSalesrep (INPUT customer.salesrep:SCREEN-VALUE, 
@@ -109,16 +106,16 @@ ON 'leave' OF customer.salesrep DO:
     END.
     DISPLAY bSales.RepName @ salesrep.RepName WITH FRAME f-cust.
 END.
-
+ 
 ON 'choose' OF bt-save DO:
    DEFINE VARIABLE lValid AS LOGICAL     NO-UNDO.
-
+ 
    RUN piValidaSalesrep (INPUT customer.salesrep:SCREEN-VALUE, 
                          OUTPUT lValid).
    IF  lValid = NO THEN DO:
        RETURN NO-APPLY.
    END.
-
+ 
    IF cAction = "add" THEN DO:
       CREATE bCust.
       ASSIGN bCust.custNum  = INPUT customer.CustNum.
@@ -128,23 +125,22 @@ ON 'choose' OF bt-save DO:
             WHERE bCust.custnum = customer.custnum
             EXCLUSIVE-LOCK NO-ERROR.
    END.
-   
    ASSIGN bCust.NAME     = INPUT customer.NAME
           bCust.salesrep = INPUT customer.salesrep
           bCust.address  = INPUT customer.address
           bCust.comments = INPUT customer.comments.
-
+ 
    RUN piHabilitaBotoes (INPUT TRUE).
    RUN piHabilitaCampos (INPUT FALSE).
    RUN piOpenQuery.
 END.
-
+ 
 ON 'choose' OF bt-canc DO:
     RUN piHabilitaBotoes (INPUT TRUE).
     RUN piHabilitaCampos (INPUT FALSE).
     RUN piMostra.
 END.
-
+ 
 ON CHOOSE OF bt-rel DO:
     DEFINE VARIABLE cArq AS CHARACTER NO-UNDO.
     DEFINE FRAME f-cab HEADER
@@ -176,12 +172,34 @@ ON CHOOSE OF bt-rel DO:
     OS-COMMAND NO-WAIT VALUE(cArq).
 END.
 
+ON CHOOSE OF bt-csv DO:
+    DEFINE VARIABLE cArq AS CHARACTER NO-UNDO.
+    ASSIGN cArq = SESSION:TEMP-DIRECTORY + "sports.txt".
+    OUTPUT to value(cArq).
+    FOR EACH customer NO-LOCK:
+        FIND FIRST salesrep 
+            WHERE Salesrep.SalesRep = Customer.SalesRep 
+            NO-LOCK NO-ERROR.
+        PUT UNFORMATTED
+            Customer.CustNum    ";"
+            Customer.Name       ";"
+            Customer.State      ";"
+            customer.salesrep   ";".
+        IF AVAILABLE salesrep THEN
+            PUT UNFORMATTED
+                Salesrep.RepName.
+            put unformatted skip.
+    END.
+    OUTPUT close.
+    OS-COMMAND NO-WAIT VALUE("notepad " + cArq).
+END.
+ 
 RUN piOpenQuery.
 RUN piHabilitaBotoes (INPUT TRUE).
 APPLY "choose" TO bt-pri.
-
+ 
 WAIT-FOR WINDOW-CLOSE OF FRAME f-cust.
-
+ 
 PROCEDURE piMostra:
     IF AVAILABLE customer THEN DO:
         DISPLAY customer.custnum customer.NAME customer.salesrep
@@ -193,24 +211,22 @@ PROCEDURE piMostra:
         ASSIGN customer.comments:SCREEN-VALUE IN FRAME f-cust = "".
     END.
 END PROCEDURE.
-
+ 
 PROCEDURE piOpenQuery:
     DEFINE VARIABLE rRecord AS ROWID       NO-UNDO.
-    
     IF  AVAILABLE customer THEN DO:
         ASSIGN rRecord = ROWID(customer).
     END.
-    
     OPEN QUERY qCust 
         FOR EACH customer, 
            FIRST salesrep WHERE salesrep.salesrep = customer.salesrep.
-
+ 
     REPOSITION qCust TO ROWID rRecord NO-ERROR.
 END PROCEDURE.
-
+ 
 PROCEDURE piHabilitaBotoes:
     DEFINE INPUT PARAMETER pEnable AS LOGICAL NO-UNDO.
-
+ 
     DO WITH FRAME f-cust:
        ASSIGN bt-pri:SENSITIVE  = pEnable
               bt-ant:SENSITIVE  = pEnable
@@ -221,14 +237,15 @@ PROCEDURE piHabilitaBotoes:
               bt-mod:SENSITIVE  = pEnable
               bt-del:SENSITIVE  = pEnable
               bt-rel:SENSITIVE  = pEnable
+              bt-csv:SENSITIVE  = pEnable
               bt-save:SENSITIVE = NOT pEnable
               bt-canc:SENSITIVE = NOT pEnable.
     END.
 END PROCEDURE.
-
+ 
 PROCEDURE piHabilitaCampos:
     DEFINE INPUT PARAMETER pEnable AS LOGICAL NO-UNDO.
-
+ 
     DO WITH FRAME f-cust:
        ASSIGN customer.NAME:SENSITIVE     = pEnable
               customer.salesrep:SENSITIVE = pEnable
@@ -236,11 +253,10 @@ PROCEDURE piHabilitaCampos:
               customer.comments:SENSITIVE = pEnable.
     END.
 END PROCEDURE.
-
+ 
 PROCEDURE piValidaSalesrep:
     DEFINE INPUT PARAMETER pSalesrep AS CHARACTER NO-UNDO.
     DEFINE OUTPUT PARAMETER pValid AS LOGICAL NO-UNDO INITIAL NO.
-  
     FIND FIRST bSales
         WHERE bSales.salesrep = pSalesrep
         NO-LOCK NO-ERROR.
@@ -252,13 +268,3 @@ PROCEDURE piValidaSalesrep:
     ELSE 
        ASSIGN pValid = YES.
 END PROCEDURE.
-
-
-
-
-
-
-
-
-
-
