@@ -206,31 +206,31 @@ ON CHOOSE OF bt-json DO:
     DEFINE VARIABLE oOrd    AS JsonObject NO-UNDO.
     
     ASSIGN cArq = SESSION:TEMP-DIRECTORY + "sports.json".
-    aCust = new JsonArray(). 
+    aCust = NEW JsonArray(). 
     FOR EACH customer NO-LOCK:
         FIND FIRST salesrep 
             WHERE Salesrep.SalesRep = Customer.SalesRep 
             NO-LOCK NO-ERROR.
-            oObj = new JsonObject().
+            oObj = NEW JsonObject().
             oObj:add("CustNum", Customer.CustNum).
             oObj:add("Name", Customer.Name).
             oObj:add("State", Customer.State).
             oObj:add("Salesrep", customer.salesrep).
         IF AVAILABLE salesrep THEN
            oObj:add("Repname", Salesrep.RepName).
-        aOrders = new JsonArray().
-        for each order no-lock 
-            where order.custnum = customer.custnum:
-            oOrd = new JsonObject().
+        aOrders = NEW JsonArray().
+        FOR EACH order NO-LOCK 
+            WHERE order.custnum = customer.custnum:
+            oOrd = NEW JsonObject().
             oOrd:add("ordernum", Order.Ordernum).
             oOrd:add("orderdate", Order.OrderDate).
             aOrders:add(oOrd).
-        end.
+        END.
         oObj:add("OrderList", aOrders).
         aCust:add(oObj).
     END.
-    def var lcTxt as longchar no-undo.
-    aCust:WriteFile(Input cArq, Input yes, input "utf-8").
+    DEFINE VARIABLE lcTxt AS LONGCHAR NO-UNDO.
+    aCust:WriteFile(INPUT cArq, INPUT YES, INPUT "utf-8").
     
 /*    output to value(cArq).     */
 /*    put unformatted lctxt skip.*/
