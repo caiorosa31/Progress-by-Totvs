@@ -1,37 +1,39 @@
 CURRENT-WINDOW:WIDTH = 251.
 
-DEF BUTTON bt-pri LABEL "<<".
-DEF BUTTON bt-ant LABEL "<".
-DEF BUTTON bt-prox LABEL ">".
-DEF BUTTON bt-ult LABEL ">>".
-DEF BUTTON bt-add LABEL "Novo".
-DEF BUTTON bt-mod LABEL "Modificar".
-DEF BUTTON bt-del LABEL "Remover".
-DEF BUTTON bt-save LABEL "Salvar".
-DEF BUTTON bt-canc LABEL "Cancelar".
-DEF BUTTON bt-sair LABEL "Sair" AUTO-ENDKEY.
+DEFINE BUTTON bt-pri LABEL "<<".
+DEFINE BUTTON bt-ant LABEL "<".
+DEFINE BUTTON bt-prox LABEL ">".
+DEFINE BUTTON bt-ult LABEL ">>".
+DEFINE BUTTON bt-add LABEL "Novo".
+DEFINE BUTTON bt-mod LABEL "Modificar".
+DEFINE BUTTON bt-del LABEL "Remover".
+DEFINE BUTTON bt-save LABEL "Salvar".
+DEFINE BUTTON bt-canc LABEL "Cancelar".
+DEFINE BUTTON bt-sair LABEL "Sair" AUTO-ENDKEY.
+DEFINE BUTTON bt-rel LABEL "Relatorio".
 
 DEFINE VARIABLE cAction  AS CHARACTER   NO-UNDO.
 
-DEF QUERY qCust FOR customer, salesrep SCROLLING.
+DEFINE QUERY qCust FOR customer, salesrep SCROLLING.
 
-DEF BUFFER bCust  FOR customer.
-DEF BUFFER bSales FOR salesrep.
+DEFINE BUFFER bCust  FOR customer.
+DEFINE BUFFER bSales FOR salesrep.
 
-DEF FRAME f-cust
+DEFINE FRAME f-cust
     bt-pri AT 10
     bt-ant 
     bt-prox 
     bt-ult SPACE(3) 
-    bt-add bt-mod bt-del SPACE(3)
+    bt-add bt-mod bt-del bt-rel SPACE(3)
     bt-save bt-canc SPACE(3)
     bt-sair  SKIP(1)
     customer.custnum  COLON 20
     customer.NAME     COLON 20
-    customer.salesrep COLON 20 salesrep.repname NO-LABEL  
+    customer.salesrep COLON 20 salesrep.repname NO-LABELS  
     customer.address  COLON 20
     customer.comments VIEW-AS EDITOR SIZE 70 BY 3 SCROLLBAR-VERTICAL COLON 20
-    WITH SIDE-LABELS THREE-D SIZE 100 BY 20.
+    WITH SIDE-LABELS THREE-D SIZE 120 BY 20
+         VIEW-AS DIALOG-BOX TITLE "Manuten‡Æo de Clientes".
 
 ON 'choose' OF bt-pri DO:
     GET FIRST qCust.
@@ -76,16 +78,16 @@ END.
 ON 'choose' OF bt-del DO:
     DEFINE VARIABLE lConf AS LOGICAL     NO-UNDO.
     
-    DEF BUFFER bCustomer FOR customer.
+    DEFINE BUFFER bCustomer FOR customer.
     
     MESSAGE "Confirma a eliminacao do customer" customer.custnum "?" UPDATE lConf
             VIEW-AS ALERT-BOX QUESTION BUTTONS YES-NO
-                TITLE "Elimina��o".
+                TITLE "Elimina‡Æo".
     IF  lConf THEN DO:
         FIND bCustomer
             WHERE bCustomer.custnum = customer.custnum
             EXCLUSIVE-LOCK NO-ERROR.
-        IF  AVAIL bCustomer THEN DO:
+        IF  AVAILABLE bCustomer THEN DO:
             FOR EACH invoice OF customer EXCLUSIVE-LOCK:
                 DELETE invoice.
             END.
@@ -105,7 +107,7 @@ ON 'leave' OF customer.salesrep DO:
     IF  lValid = NO THEN DO:
         RETURN NO-APPLY.
     END.
-    DISP bSales.RepName @ salesrep.RepName WITH FRAME f-cust.
+    DISPLAY bSales.RepName @ salesrep.RepName WITH FRAME f-cust.
 END.
 
 ON 'choose' OF bt-save DO:
@@ -143,15 +145,46 @@ ON 'choose' OF bt-canc DO:
     RUN piMostra.
 END.
 
+ON CHOOSE OF bt-rel DO:
+    DEFINE VARIABLE cArq AS CHARACTER NO-UNDO.
+    DEFINE FRAME f-cab HEADER
+        "Relatorio de Customers" AT 1
+        TODAY TO 120
+        WITH PAGE-TOP WIDTH 120.
+    DEFINE FRAME f-dados
+        Customer.CustNum
+        Customer.Name
+        Customer.State
+        customer.salesrep
+        Salesrep.RepName
+        WITH DOWN WIDTH 120.
+    ASSIGN cArq = SESSION:TEMP-DIRECTORY + "sports.txt".
+    OUTPUT to value(cArq) page-size 20 paged.
+    VIEW FRAME f-cab.
+    FOR EACH customer NO-LOCK WITH FRAME f-dados:
+        FIND FIRST salesrep 
+            WHERE Salesrep.SalesRep = Customer.SalesRep 
+            NO-LOCK NO-ERROR.
+        DISPLAY Customer.CustNum
+            Customer.Name
+            Customer.State
+            customer.salesrep
+            Salesrep.RepName WHEN AVAILABLE salesrep
+            WITH FRAME f-dados.
+    END.
+    OUTPUT close.
+    OS-COMMAND NO-WAIT VALUE(cArq).
+END.
+
 RUN piOpenQuery.
 RUN piHabilitaBotoes (INPUT TRUE).
 APPLY "choose" TO bt-pri.
 
-WAIT-FOR ENDKEY OF FRAME f-cust.
+WAIT-FOR WINDOW-CLOSE OF FRAME f-cust.
 
 PROCEDURE piMostra:
-    IF AVAIL customer THEN DO:
-        DISP customer.custnum customer.NAME customer.salesrep
+    IF AVAILABLE customer THEN DO:
+        DISPLAY customer.custnum customer.NAME customer.salesrep
              salesrep.repname customer.address customer.comments
              WITH FRAME f-cust.
     END.
@@ -164,7 +197,7 @@ END PROCEDURE.
 PROCEDURE piOpenQuery:
     DEFINE VARIABLE rRecord AS ROWID       NO-UNDO.
     
-    IF  AVAIL customer THEN DO:
+    IF  AVAILABLE customer THEN DO:
         ASSIGN rRecord = ROWID(customer).
     END.
     
@@ -176,7 +209,7 @@ PROCEDURE piOpenQuery:
 END PROCEDURE.
 
 PROCEDURE piHabilitaBotoes:
-    DEF INPUT PARAM pEnable AS LOGICAL NO-UNDO.
+    DEFINE INPUT PARAMETER pEnable AS LOGICAL NO-UNDO.
 
     DO WITH FRAME f-cust:
        ASSIGN bt-pri:SENSITIVE  = pEnable
@@ -187,13 +220,14 @@ PROCEDURE piHabilitaBotoes:
               bt-add:SENSITIVE  = pEnable
               bt-mod:SENSITIVE  = pEnable
               bt-del:SENSITIVE  = pEnable
+              bt-rel:SENSITIVE  = pEnable
               bt-save:SENSITIVE = NOT pEnable
               bt-canc:SENSITIVE = NOT pEnable.
     END.
 END PROCEDURE.
 
 PROCEDURE piHabilitaCampos:
-    DEF INPUT PARAM pEnable AS LOGICAL NO-UNDO.
+    DEFINE INPUT PARAMETER pEnable AS LOGICAL NO-UNDO.
 
     DO WITH FRAME f-cust:
        ASSIGN customer.NAME:SENSITIVE     = pEnable
@@ -204,13 +238,13 @@ PROCEDURE piHabilitaCampos:
 END PROCEDURE.
 
 PROCEDURE piValidaSalesrep:
-    DEF INPUT PARAM pSalesrep AS CHAR NO-UNDO.
-    DEF OUTPUT PARAM pValid AS LOGICAL NO-UNDO INITIAL NO.
-    
+    DEFINE INPUT PARAMETER pSalesrep AS CHARACTER NO-UNDO.
+    DEFINE OUTPUT PARAMETER pValid AS LOGICAL NO-UNDO INITIAL NO.
+  
     FIND FIRST bSales
         WHERE bSales.salesrep = pSalesrep
         NO-LOCK NO-ERROR.
-    IF  NOT AVAIL bSales THEN DO:
+    IF  NOT AVAILABLE bSales THEN DO:
         MESSAGE "SalesRep" pSalesrep "nao existe!!!"
                 VIEW-AS ALERT-BOX ERROR.
         ASSIGN pValid = NO.
