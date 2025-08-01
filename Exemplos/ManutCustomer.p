@@ -1,3 +1,6 @@
+USING Progress.Json.ObjectModel.JsonArray FROM PROPATH.
+USING Progress.Json.ObjectModel.JsonObject FROM PROPATH.
+
 CURRENT-WINDOW:WIDTH = 251.
  
 DEFINE BUTTON bt-pri LABEL "<<".
@@ -12,6 +15,7 @@ DEFINE BUTTON bt-canc LABEL "Cancelar".
 DEFINE BUTTON bt-sair LABEL "Sair" AUTO-ENDKEY.
 DEFINE BUTTON bt-rel LABEL "Relatorio".
 DEFINE BUTTON bt-csv LABEL "Gerar csv".
+DEFINE BUTTON bt-json LABEL "Exportar JSON".
  
 DEFINE VARIABLE cAction  AS CHARACTER   NO-UNDO.
  
@@ -25,7 +29,7 @@ DEFINE FRAME f-cust
     bt-ant 
     bt-prox 
     bt-ult SPACE(3) 
-    bt-add bt-mod bt-del bt-rel bt-csv SPACE(3)
+    bt-add bt-mod bt-del bt-rel bt-csv bt-json SPACE(3)
     bt-save bt-canc SPACE(3)
     bt-sair  SKIP(1)
     customer.custnum  COLON 20
@@ -33,7 +37,7 @@ DEFINE FRAME f-cust
     customer.salesrep COLON 20 salesrep.repname NO-LABELS  
     customer.address  COLON 20
     customer.comments VIEW-AS EDITOR SIZE 70 BY 3 SCROLLBAR-VERTICAL COLON 20
-    WITH SIDE-LABELS THREE-D SIZE 120 BY 20
+    WITH SIDE-LABELS THREE-D SIZE 140 BY 12
          VIEW-AS DIALOG-BOX TITLE "Manutencao de Clientes".
  
 ON 'choose' OF bt-pri DO:
@@ -174,7 +178,7 @@ END.
 
 ON CHOOSE OF bt-csv DO:
     DEFINE VARIABLE cArq AS CHARACTER NO-UNDO.
-    ASSIGN cArq = SESSION:TEMP-DIRECTORY + "sports.txt".
+    ASSIGN cArq = SESSION:TEMP-DIRECTORY + "sports.csv".
     OUTPUT to value(cArq).
     FOR EACH customer NO-LOCK:
         FIND FIRST salesrep 
@@ -188,9 +192,50 @@ ON CHOOSE OF bt-csv DO:
         IF AVAILABLE salesrep THEN
             PUT UNFORMATTED
                 Salesrep.RepName.
-            put unformatted skip.
+            PUT UNFORMATTED SKIP.
     END.
     OUTPUT close.
+    OS-COMMAND NO-WAIT VALUE("notepad " + cArq).
+END.
+
+ON CHOOSE OF bt-json DO:
+    DEFINE VARIABLE cArq    AS CHARACTER  NO-UNDO.
+    DEFINE VARIABLE oObj    AS JsonObject NO-UNDO.
+    DEFINE VARIABLE aCust   AS JsonArray  NO-UNDO.
+    DEFINE VARIABLE aOrders AS JsonArray  NO-UNDO.
+    DEFINE VARIABLE oOrd    AS JsonObject NO-UNDO.
+    
+    ASSIGN cArq = SESSION:TEMP-DIRECTORY + "sports.json".
+    aCust = new JsonArray(). 
+    FOR EACH customer NO-LOCK:
+        FIND FIRST salesrep 
+            WHERE Salesrep.SalesRep = Customer.SalesRep 
+            NO-LOCK NO-ERROR.
+            oObj = new JsonObject().
+            oObj:add("CustNum", Customer.CustNum).
+            oObj:add("Name", Customer.Name).
+            oObj:add("State", Customer.State).
+            oObj:add("Salesrep", customer.salesrep).
+        IF AVAILABLE salesrep THEN
+           oObj:add("Repname", Salesrep.RepName).
+        aOrders = new JsonArray().
+        for each order no-lock 
+            where order.custnum = customer.custnum:
+            oOrd = new JsonObject().
+            oOrd:add("ordernum", Order.Ordernum).
+            oOrd:add("orderdate", Order.OrderDate).
+            aOrders:add(oOrd).
+        end.
+        oObj:add("OrderList", aOrders).
+        aCust:add(oObj).
+    END.
+    def var lcTxt as longchar no-undo.
+    aCust:WriteFile(Input cArq, Input yes, input "utf-8").
+    
+/*    output to value(cArq).     */
+/*    put unformatted lctxt skip.*/
+/*    OUTPUT close.              */
+    
     OS-COMMAND NO-WAIT VALUE("notepad " + cArq).
 END.
  
@@ -238,6 +283,7 @@ PROCEDURE piHabilitaBotoes:
               bt-del:SENSITIVE  = pEnable
               bt-rel:SENSITIVE  = pEnable
               bt-csv:SENSITIVE  = pEnable
+              bt-json:SENSITIVE  = pEnable
               bt-save:SENSITIVE = NOT pEnable
               bt-canc:SENSITIVE = NOT pEnable.
     END.
